@@ -1,0 +1,45 @@
+name: Documentation Builder and Publisher
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+
+jobs:
+  build-publish:
+    name: Builds and publishes a Sphinx-based documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pulls the repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Sets up Conda with Python 3.8
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: 3.8
+          activate-environment: archai
+      - name: Installs the requirements
+        shell: bash -l {0}
+        run: |
+          sudo apt install pandoc -y
+          python -m pip install --user -e .[dev]
+      - name: Builds the documentation
+        shell: bash -l {0}
+        run: |
+          cd docs
+          make clean
+          make html
+      - name: Pushes to gh-pages branch
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html/
